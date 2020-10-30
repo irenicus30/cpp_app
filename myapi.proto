@@ -8,7 +8,7 @@ service UserService {
 
     rpc EnumerateRecords (Page) returns (Users) {}
 
-    rpc GetRecord (PrimaryKey) returns (UserData) {}
+    rpc GetRecord (PrimaryKey) returns (Users) {}
 
 }
 
@@ -20,10 +20,8 @@ message UserData {
 }
 
 message RegisterUserData {
-    string email = 1;
-    string nickname = 2;
-    bool is_active  = 3;
-    string password = 4;
+    UserData data = 1;
+    string password = 2;
 }
 
 message Users {
@@ -40,5 +38,5 @@ message Page {
 }
 
 message PrimaryKey {
-    int32 index = 1;
+    string email = 1;
 }

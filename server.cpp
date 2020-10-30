@@ -1,7 +1,12 @@
 #include <grpcpp/grpcpp.h>
+#include <sstream>
 #include <string>
-#include <sqlite3.h> 
 #include "myapi.grpc.pb.h"
+
+#include <QSqlDatabase>
+#include <QSqlQuery>
+#include <QSqlError>
+#include <QSqlRecord>
 
 using grpc::Server;
 using grpc::ServerBuilder;
@@ -18,19 +23,103 @@ using myapi::UserService;
 
 class DatabaseManager {
 public:
-  static DatabaseManager& getInstance() {
+  static DatabaseManager& GetInstance() {
     static DatabaseManager instance;
     return instance;
   }
 
-  bool connect(std::string filename) {
-    int rc = sqlite3_open_v2(filename.c_str(), &db, SQLITE_OPEN_FULLMUTEX, NULL);
-    if (rc != SQLITE_OK) {
-      std::cout << std::endl << "Failed to initialize sqlite connection handle." << std::endl;
-      return false;
+  bool Connect(std::string path) {
+    const QString& qt_path = path.c_str();
+    m_db = QSqlDatabase::addDatabase("QSQLITE");
+    m_db.setDatabaseName(path);
+    if (!m_db.open()) {
+        std::cout << "Error: connection with database fail" << std::endl;
+    } else {
+        std::cout << "Database: connection ok" << std::endl;
     }
   }
 
+  bool Register(const RegisterUserData* registerUserData) {
+
+    QSqlQuery query;
+    query.prepare("INSERT INTO users (email, nickname, is_active, password) "
+                  "VALUES (:email, :nickname, :is_active, :password)");
+    query.bindValue(":email", registerUserData->email().c_str());
+    query.bindValue(":nickname", registerUserData->nickname().c_str());
+    query.bindValue(":is_active", registerUserData->is_active());
+    query.bindValue(":password", registerUserData->password().c_str());
+    bool success = query.exec();
+    return success;
+  }
+
+  bool EnumerateRecords(const Page* page, Users* users) {
+
+    int page_number = page->page_number();
+    int page_size = page->page_size();
+    int offset = (page_number-1) * page_size;
+    if(offset<0) {
+      std::cout << "Negative offset! page numeration should start from 1" << std::endl;
+      return false;
+    }
+
+    QSqlQuery query;
+    query.prepare("SELECT * FROM users LIMIT :offset,:page_size");
+    query.bindValue(":offset", offset);
+    query.bindValue(":page_size", page_size);
+    bool success = query.exec();
+
+    int id_email = query.record().indexOf("email");
+    int id_nickname = query.record().indexOf("nickname");
+    int id_is_active = query.record().indexOf("is_active");
+
+    while (query.next()) {
+      std::string email = query.value(id_email)
+                               .toString()
+                               .toUtf8()
+                               .constData();
+      std::string nickname = query.value(id_nickname)
+                                  .toString()
+                                  .toUtf8()
+                                  .constData();
+      bool is_active = query.value(id_is_active)
+                            .toBool();
+      UserData* data = users->add_entry();
+      data->set_email(email.c_str());
+      data->set_nickname(nickname.c_str());
+      data->set_is_active(is_active);
+    }
+    return success;
+  }
+
+  bool GetRecord(const PrimaryKey* key, Users* users) {
+
+    QSqlQuery query;
+    query.prepare("SELECT * FROM users WHERE email = :email");
+    query.bindValue(":email", key->email().c_str());
+    bool success = query.exec();
+
+    int id_email = query.record().indexOf("email");
+    int id_nickname = query.record().indexOf("nickname");
+    int id_is_active = query.record().indexOf("is_active");
+
+    if (query.next()) {
+      std::string email = query.value(id_email)
+                               .toString()
+                               .toUtf8()
+                               .constData();
+      std::string nickname = query.value(id_nickname)
+                                  .toString()
+                                  .toUtf8()
+                                  .constData();
+      bool is_active = query.value(id_is_active)
+                            .toBool();
+      UserData* data = users->add_entry();
+      data->set_email(email.c_str());
+      data->set_nickname(nickname.c_str());
+      data->set_is_active(is_active);
+    }
+    return success;
+  }
 
   DatabaseManager(const DatabaseManager &) = delete;
   DatabaseManager & operator = (const DatabaseManager &) = delete;
@@ -38,12 +127,12 @@ public:
 private:
   DatabaseManager() {}
   ~DatabaseManager() {
-    if(db != nullptr) {
-      sqlite3_close(db);
+    if (m_db.isOpen()) {
+        m_db.close();
     }
   }
 
-  sqlite3* db = nullptr; 
+  QSqlDatabase m_db;
 };
 
 
@@ -53,7 +142,8 @@ class UserServiceImplementation final : public UserService::Service {
   Status Register(ServerContext* context, const RegisterUserData* registerUserData,
                   RegisterReply* reply) override {
     
-    std::cout << "Register" << std::endl;
+    std::cout << "Register invoked" << std::endl;
+    DatabaseManager::GetInstance.Register(registerUserData);
 
     reply->set_status(true);
     return Status::OK;

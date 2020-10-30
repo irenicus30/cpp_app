@@ -82,24 +82,28 @@ class UserServiceClient {
     }
   }
   
-  void GetRecord(int index) {
+  void GetRecord(std::string email) {
     // Data to be sent to server
     PrimaryKey key;
-    key.set_index(index);
+    key.set_email(email);
 
     // Container for server response
-    UserData user;
+    Users users;
 
     // Context can be used to send meta data to server or modify RPC behaviour
     ClientContext context;
 
     // Actual Remote Procedure Call
-    Status status = stub_->GetRecord(&context, key, &user);
+    Status status = stub_->GetRecord(&context, key, &users);
 
     // Returns results based on RPC status
     if (status.ok()) {
-      std::cout << "User:" << std::endl;
-      std::cout << user.email() << " " << user.nickname() << " " << user.is_active() << std::endl;
+      std::cout << "GetRecord ok" << std::endl;
+      std::cout << "users.entry_size() " << users.entry_size() << std::endl;
+      if(users.entry_size()) {
+        UserData user = users.entry(0);
+        std::cout << user.email() << " " << user.nickname() << " " << user.is_active() << std::endl;
+      }
     } else {
       std::cout << status.error_code() << ": " << status.error_message()
                 << std::endl;
@@ -123,7 +127,7 @@ void RunClient() {
 
   client.Register();
   client.EnumerateRecords(5, 5);
-  client.GetRecord(5);
+  client.GetRecord('email_one');
   client.EnumerateRecords(5, 5);
 
   std::cout << "Done" << std::endl;
