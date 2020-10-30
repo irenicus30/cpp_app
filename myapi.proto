@@ -1,0 +1,44 @@
+syntax = "proto3";
+
+package myapi;
+
+service UserService {
+
+    rpc Register (RegisterUserData) returns (RegisterReply) {}
+
+    rpc EnumerateRecords (Page) returns (Users) {}
+
+    rpc GetRecord (PrimaryKey) returns (UserData) {}
+
+}
+
+
+message UserData {
+    string email = 1;
+    string nickname = 2;
+    bool is_active  = 3;
+}
+
+message RegisterUserData {
+    string email = 1;
+    string nickname = 2;
+    bool is_active  = 3;
+    string password = 4;
+}
+
+message Users {
+    repeated UserData entry = 1;
+}
+
+message RegisterReply {
+    bool status = 1;
+}
+
+message Page {
+    int32 page_number = 1;
+    int32 page_size = 2;
+}
+
+message PrimaryKey {
+    int32 index = 1;
+}
