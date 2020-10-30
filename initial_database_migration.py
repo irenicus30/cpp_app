@@ -12,7 +12,7 @@ if __name__ == "__main__":
     c = conn.cursor()
 
     # Create table
-    c.execute('''CREATE TABLE users
+    c.execute('''CREATE TABLE IF NOT EXISTS users
                  (email text, nickname text, is_active integer, password text)''')
 
     c.execute("INSERT INTO users VALUES ('email_one','nickname_one',0,'secret_one')")

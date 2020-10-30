@@ -1,5 +1,6 @@
 #include <grpcpp/grpcpp.h>
 #include <string>
+#include <sqlite3.h> 
 #include "myapi.grpc.pb.h"
 
 using grpc::Server;
@@ -14,6 +15,38 @@ using myapi::RegisterReply;
 using myapi::Page;
 using myapi::PrimaryKey;
 using myapi::UserService;
+
+class DatabaseManager {
+public:
+  static DatabaseManager& getInstance() {
+    static DatabaseManager instance;
+    return instance;
+  }
+
+  bool connect(std::string filename) {
+    int rc = sqlite3_open_v2(filename.c_str(), &db, SQLITE_OPEN_FULLMUTEX, NULL);
+    if (rc != SQLITE_OK) {
+      std::cout << std::endl << "Failed to initialize sqlite connection handle." << std::endl;
+      return false;
+    }
+  }
+
+
+  DatabaseManager(const DatabaseManager &) = delete;
+  DatabaseManager & operator = (const DatabaseManager &) = delete;
+
+private:
+  DatabaseManager() {}
+  ~DatabaseManager() {
+    if(db != nullptr) {
+      sqlite3_close(db);
+    }
+  }
+
+  sqlite3* db = nullptr; 
+};
+
+
 
 // Server Implementation
 class UserServiceImplementation final : public UserService::Service {
