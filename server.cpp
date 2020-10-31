@@ -3,10 +3,15 @@
 #include <string>
 #include "myapi.grpc.pb.h"
 
+
 #include <QSqlDatabase>
 #include <QSqlQuery>
 #include <QSqlError>
 #include <QSqlRecord>
+#include <QString>
+#include <QVariant>
+#include <QThreadStorage>
+#include <QUuid>
 
 using grpc::Server;
 using grpc::ServerBuilder;
@@ -28,25 +33,19 @@ public:
     return instance;
   }
 
-  bool Connect(std::string path) {
-    const QString& qt_path = path.c_str();
-    m_db = QSqlDatabase::addDatabase("QSQLITE");
-    m_db.setDatabaseName(path);
-    if (!m_db.open()) {
-        std::cout << "Error: connection with database fail" << std::endl;
-    } else {
-        std::cout << "Database: connection ok" << std::endl;
-    }
+  void SetupConfig(const std::string p) {
+    path = p.c_str();
   }
 
   bool Register(const RegisterUserData* registerUserData) {
 
-    QSqlQuery query;
+    QSqlDatabase db = GetDatabaseThisThread();
+    QSqlQuery query(db);
     query.prepare("INSERT INTO users (email, nickname, is_active, password) "
                   "VALUES (:email, :nickname, :is_active, :password)");
-    query.bindValue(":email", registerUserData->email().c_str());
-    query.bindValue(":nickname", registerUserData->nickname().c_str());
-    query.bindValue(":is_active", registerUserData->is_active());
+    query.bindValue(":email", registerUserData->data().email().c_str());
+    query.bindValue(":nickname", registerUserData->data().nickname().c_str());
+    query.bindValue(":is_active", registerUserData->data().is_active());
     query.bindValue(":password", registerUserData->password().c_str());
     bool success = query.exec();
     return success;
@@ -62,7 +61,8 @@ public:
       return false;
     }
 
-    QSqlQuery query;
+    QSqlDatabase db = GetDatabaseThisThread();
+    QSqlQuery query(db);
     query.prepare("SELECT * FROM users LIMIT :offset,:page_size");
     query.bindValue(":offset", offset);
     query.bindValue(":page_size", page_size);
@@ -93,7 +93,8 @@ public:
 
   bool GetRecord(const PrimaryKey* key, Users* users) {
 
-    QSqlQuery query;
+    QSqlDatabase db = GetDatabaseThisThread();
+    QSqlQuery query(db);
     query.prepare("SELECT * FROM users WHERE email = :email");
     query.bindValue(":email", key->email().c_str());
     bool success = query.exec();
@@ -125,14 +126,28 @@ public:
   DatabaseManager & operator = (const DatabaseManager &) = delete;
 
 private:
-  DatabaseManager() {}
-  ~DatabaseManager() {
-    if (m_db.isOpen()) {
-        m_db.close();
+  QSqlDatabase GetDatabaseThisThread() {    
+    if(databasePool.hasLocalData()) {
+      std::cout << "database already exists" << std::endl;
+      return databasePool.localData();
+    } else {
+      QSqlDatabase database = QSqlDatabase::addDatabase("QSQLITE", QUuid::createUuid().toString());
+      database.setDatabaseName(path);
+      databasePool.setLocalData(database);
+      if (!database .open()) {
+        std::cout << "Error: connection with database fail" << std::endl;
+      } else {
+        std::cout << "Database: connection ok" << std::endl;
+      }
+      return database;
     }
   }
 
-  QSqlDatabase m_db;
+  DatabaseManager() {}
+  ~DatabaseManager() {}
+
+  QThreadStorage<QSqlDatabase> databasePool;
+  QString path;
 };
 
 
@@ -143,38 +158,26 @@ class UserServiceImplementation final : public UserService::Service {
                   RegisterReply* reply) override {
     
     std::cout << "Register invoked" << std::endl;
-    DatabaseManager::GetInstance.Register(registerUserData);
+    bool success = DatabaseManager::GetInstance().Register(registerUserData);
 
-    reply->set_status(true);
+    reply->set_status(success);
     return Status::OK;
   }
   
   Status EnumerateRecords(ServerContext* context, const Page* page,
                           Users* users) override {
     
-    std::cout << "EnumerateRecords" << std::endl;
-
-    UserData *u1 = users->add_entry();
-    u1->set_email("email from database list 1");
-    u1->set_nickname("nickname from database list 1");
-    u1->set_is_active(false);
-    
-    UserData *u2 = users->add_entry();
-    u2->set_email("email from database list 2");
-    u2->set_nickname("nickname from database list 2");
-    u2->set_is_active(true);
+    std::cout << "EnumerateRecords invoked" << std::endl;
+    bool success = DatabaseManager::GetInstance().EnumerateRecords(page, users);
 
     return Status::OK;
   }
   
   Status GetRecord(ServerContext* context, const PrimaryKey* key,
-                   UserData* user) override {
+                   Users* users) override {
     
-    std::cout << "GetRecord" << std::endl;
-
-    user->set_email("email from database");
-    user->set_nickname("nickname from database");
-    user->set_is_active(true);
+    std::cout << "GetRecord invoked" << std::endl;
+    bool success = DatabaseManager::GetInstance().GetRecord(key, users);
 
     return Status::OK;
   }
@@ -199,6 +202,8 @@ void RunServer() {
 }
 
 int main(int argc, char** argv) {
+  DatabaseManager& instance =  DatabaseManager::GetInstance();
+  instance.SetupConfig("../../test.db");
   RunServer();
   return 0;
 }

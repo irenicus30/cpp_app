@@ -4,6 +4,9 @@ cmake_minimum_required(VERSION 3.15)
 # Project
 project(myapi)
 
+# Qt
+find_package(Qt5 COMPONENTS Core Sql REQUIRED)
+
 # Protobuf
 set(protobuf_MODULE_COMPATIBLE TRUE)
 find_package(Protobuf CONFIG REQUIRED)
@@ -49,5 +52,7 @@ foreach(_target
   target_link_libraries(${_target}
     ${_REFLECTION}
     ${_GRPC_GRPCPP}
-    ${_PROTOBUF_LIBPROTOBUF})
+    ${_PROTOBUF_LIBPROTOBUF}
+    Qt5::Core
+    Qt5::Sql)
 endforeach()

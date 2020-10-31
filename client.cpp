@@ -15,7 +15,7 @@ using myapi::PrimaryKey;
 using myapi::UserService;
 
 class UserServiceClient {
- public:
+public:
   UserServiceClient(std::shared_ptr<Channel> channel)
       : stub_(UserService::NewStub(channel)) {}
 
@@ -24,9 +24,9 @@ class UserServiceClient {
     // Data to be sent to server
     RegisterUserData registerUserData;
 
-    registerUserData.set_email("dummy email");
-    registerUserData.set_nickname("dummy nickname");
-    registerUserData.set_is_active(true);
+    registerUserData.mutable_data()->set_email("dummy email");
+    registerUserData.mutable_data()->set_nickname("dummy nickname");
+    registerUserData.mutable_data()->set_is_active(true);
     registerUserData.set_password("secret");
 
     // Container for server response
@@ -40,6 +40,7 @@ class UserServiceClient {
 
     // Returns results based on RPC status
     if (status.ok()) {
+      std::cout << "GetRecord ok" << std::endl;
       if (reply.status()) {
         std::cout << "user registered" << std::endl;
       } else {
@@ -85,7 +86,7 @@ class UserServiceClient {
   void GetRecord(std::string email) {
     // Data to be sent to server
     PrimaryKey key;
-    key.set_email(email);
+    key.set_email(email.c_str());
 
     // Container for server response
     Users users;
@@ -111,7 +112,7 @@ class UserServiceClient {
     }
   }
 
- private:
+private:
   std::unique_ptr<UserService::Stub> stub_;
 };
 
@@ -127,8 +128,8 @@ void RunClient() {
 
   client.Register();
   client.EnumerateRecords(5, 5);
-  client.GetRecord('email_one');
-  client.EnumerateRecords(5, 5);
+  client.GetRecord("email_one");
+  client.EnumerateRecords(2, 5);
 
   std::cout << "Done" << std::endl;
 }
