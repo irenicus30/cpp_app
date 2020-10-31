@@ -24,7 +24,7 @@ public:
     // Data to be sent to server
     RegisterUserData registerUserData;
 
-    registerUserData.mutable_data()->set_email("dummy email");
+    registerUserData.mutable_data()->set_email("dummy email #2");
     registerUserData.mutable_data()->set_nickname("dummy nickname");
     registerUserData.mutable_data()->set_is_active(true);
     registerUserData.set_password("secret");
@@ -127,9 +127,9 @@ void RunClient() {
 
 
   client.Register();
-  client.EnumerateRecords(5, 5);
+  client.EnumerateRecords(1, 5);
   client.GetRecord("email_one");
-  client.EnumerateRecords(2, 5);
+  client.EnumerateRecords(2, 1);
 
   std::cout << "Done" << std::endl;
 }

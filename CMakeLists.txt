@@ -4,6 +4,11 @@ cmake_minimum_required(VERSION 3.15)
 # Project
 project(myapi)
 
+set (CMAKE_CXX_STANDARD 11)
+
+set(dbmgr_src "databasemanager.cpp")
+set(dbmgr_hdr "databasemanager.h")
+
 # Qt
 find_package(Qt5 COMPONENTS Core Sql REQUIRED)
 
@@ -48,7 +53,8 @@ foreach(_target
   client server)
   add_executable(${_target} "${_target}.cpp"
     ${hw_proto_srcs}
-    ${hw_grpc_srcs})
+    ${hw_grpc_srcs}
+    ${dbmgr_src})
   target_link_libraries(${_target}
     ${_REFLECTION}
     ${_GRPC_GRPCPP}
