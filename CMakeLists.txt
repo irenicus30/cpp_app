@@ -9,9 +9,6 @@ set (CMAKE_CXX_STANDARD 14)
 set(dbmgr_src "databasemanager.cpp")
 set(dbmgr_hdr "databasemanager.h")
 
-# Qt
-find_package(Qt5 COMPONENTS Core Sql REQUIRED)
-
 # Protobuf
 set(protobuf_MODULE_COMPATIBLE TRUE)
 find_package(Protobuf CONFIG REQUIRED)
@@ -25,6 +22,11 @@ find_package(gRPC CONFIG REQUIRED)
 message(STATUS "Using gRPC ${gRPC_VERSION}")
 set(_GRPC_GRPCPP gRPC::grpc++)
 set(_GRPC_CPP_PLUGIN_EXECUTABLE $<TARGET_FILE:gRPC::grpc_cpp_plugin>)
+
+# Qt
+find_package(Qt5 COMPONENTS Core Sql REQUIRED)
+
+find_package(Threads REQUIRED)
 
 # Proto file
 get_filename_component(hw_proto "myapi.proto" ABSOLUTE)
@@ -56,9 +58,9 @@ foreach(_target
     ${hw_grpc_srcs}
     ${dbmgr_src})
   target_link_libraries(${_target}
+    Qt5::Core
+    Qt5::Sql
     ${_REFLECTION}
     ${_GRPC_GRPCPP}
-    ${_PROTOBUF_LIBPROTOBUF}
-    Qt5::Core
-    Qt5::Sql)
+    ${_PROTOBUF_LIBPROTOBUF})
 endforeach()
