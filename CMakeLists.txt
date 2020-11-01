@@ -1,10 +1,10 @@
 # Minimum CMake required
-cmake_minimum_required(VERSION 3.15)
+cmake_minimum_required(VERSION 3.10)
 
 # Project
 project(myapi)
 
-set (CMAKE_CXX_STANDARD 11)
+set (CMAKE_CXX_STANDARD 14)
 
 set(dbmgr_src "databasemanager.cpp")
 set(dbmgr_hdr "databasemanager.h")
